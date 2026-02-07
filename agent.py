@@ -36,7 +36,7 @@ def build_agent(
     model: str = "qwen3:14b",
     base_url: str = "http://localhost:11434",
     api_base_url: str = "https://server.cetacean-tuna.ts.net",
-    include_high_intensity: bool = False,
+    include_high_intensity: bool = True,
 ) -> Any:
     client = SmashAPIClient(base_url=api_base_url)
     policy = ToolPolicy()
@@ -66,9 +66,9 @@ def main() -> None:
         help="Smash API base URL.",
     )
     parser.add_argument(
-        "--include-high-intensity",
+        "--disable-high-intensity",
         action="store_true",
-        help="Expose /search/by-slug tool for analytics requests.",
+        help="Disable /search/by-slug tool exposure.",
     )
     args = parser.parse_args()
 
@@ -77,7 +77,7 @@ def main() -> None:
         model=args.model,
         base_url=args.base_url,
         api_base_url=args.api_base_url,
-        include_high_intensity=args.include_high_intensity,
+        include_high_intensity=not args.disable_high_intensity,
     )
     result = run_query(agent, args.query)
     print(result["messages"][-1].content)

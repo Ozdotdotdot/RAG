@@ -55,17 +55,15 @@ class SmashAPIClient:
         self,
         *,
         state: str,
-        months_back: int = 6,
+        months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
-        character: str = "Marth",
     ) -> dict[str, Any]:
         params = {
             "state": state.upper(),
             "months_back": months_back,
             "videogame_id": videogame_id,
             "limit": limit,
-            "character": character,
         }
         return self._get("/precomputed", params=params)
 
@@ -74,7 +72,7 @@ class SmashAPIClient:
         *,
         state: str,
         tournament_contains: str,
-        months_back: int = 6,
+        months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
         allow_multi: bool = True,
@@ -94,7 +92,7 @@ class SmashAPIClient:
         *,
         state: str,
         tournament_contains: str,
-        months_back: int = 6,
+        months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
     ) -> dict[str, Any]:
@@ -114,13 +112,11 @@ class SmashAPIClient:
         self,
         *,
         tournament_slug: str,
-        character: str = "Marth",
         videogame_id: int = 1386,
         limit: int = 25,
     ) -> dict[str, Any]:
         params = {
             "tournament_slug": tournament_slug,
-            "character": character,
             "videogame_id": videogame_id,
             "limit": limit,
         }

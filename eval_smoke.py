@@ -11,20 +11,31 @@ from smash_api_client import SmashAPIClient, SmashAPIError
 
 
 def run_direct_api_check(client: SmashAPIClient, state: str) -> None:
-    start = time.perf_counter()
-    data = client.get_precomputed(state=state, months_back=6, limit=5)
-    elapsed_ms = int((time.perf_counter() - start) * 1000)
-    print(f"[PASS] Direct API call /precomputed in {elapsed_ms} ms, count={data.get('count')}")
+    last_error: SmashAPIError | None = None
+    for months_back in (3, 1):
+        start = time.perf_counter()
+        try:
+            data = client.get_precomputed(state=state, months_back=months_back, limit=5)
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            print(
+                f"[PASS] Direct API call /precomputed in {elapsed_ms} ms, "
+                f"months_back={months_back}, count={data.get('count')}"
+            )
+            return
+        except SmashAPIError as err:
+            last_error = err
+    if last_error is not None:
+        raise last_error
 
 
 def run_tool_check(client: SmashAPIClient, state: str) -> None:
     from tools import build_tools
 
     policy = ToolPolicy()
-    tools = build_tools(client, policy, include_high_intensity=False)
+    tools = build_tools(client, policy, include_high_intensity=True)
     tool_map = {tool.name: tool for tool in tools}
     start = time.perf_counter()
-    output = tool_map["get_player_rankings"].invoke({"state": state, "months_back": 6, "limit": 5})
+    output = tool_map["get_player_rankings"].invoke({"state": state, "months_back": 3, "limit": 5})
     elapsed_ms = int((time.perf_counter() - start) * 1000)
     print(f"[PASS] Tool call get_player_rankings in {elapsed_ms} ms")
     print(output[:500])
@@ -37,7 +48,7 @@ def run_agent_check(model: str, ollama_base_url: str, api_base_url: str, query: 
         model=model,
         base_url=ollama_base_url,
         api_base_url=api_base_url,
-        include_high_intensity=False,
+        include_high_intensity=True,
     )
     result = run_query(agent, query)
     print("[PASS] Agent invocation complete")
@@ -57,7 +68,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--query",
-        default="Who are the top players in GA in the last 6 months?",
+        default="Who are the top players in GA in the last 3 months?",
         help="Prompt for --run-agent.",
     )
     args = parser.parse_args()

@@ -24,10 +24,9 @@ def build_tools(
     @tool
     def get_player_rankings(
         state: str,
-        months_back: int = 6,
+        months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
-        character: str = "Marth",
     ) -> str:
         """Get precomputed player rankings for a state. Fast cached endpoint; returns JSON."""
         try:
@@ -36,7 +35,6 @@ def build_tools(
                 months_back=months_back,
                 videogame_id=videogame_id,
                 limit=limit,
-                character=character,
             )
             return _json(data)
         except SmashAPIError as err:
@@ -46,7 +44,7 @@ def build_tools(
     def get_series_rankings(
         state: str,
         tournament_contains: str,
-        months_back: int = 6,
+        months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
     ) -> str:
@@ -67,7 +65,7 @@ def build_tools(
     def search_tournaments(
         state: str,
         tournament_contains: str,
-        months_back: int = 6,
+        months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
     ) -> str:
@@ -105,7 +103,6 @@ def build_tools(
         def get_tournament_player_analytics(
             tournament_slug: str,
             user_request: str,
-            character: str = "Marth",
             videogame_id: int = 1386,
             limit: int = 25,
         ) -> str:
@@ -118,7 +115,6 @@ def build_tools(
             try:
                 data = client.search_by_slug(
                     tournament_slug=tournament_slug,
-                    character=character,
                     videogame_id=videogame_id,
                     limit=limit,
                 )

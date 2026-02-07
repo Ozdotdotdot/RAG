@@ -27,14 +27,17 @@ def build_tools(
         months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
+        min_entrants: int = 32,
     ) -> str:
-        """Get precomputed player rankings for a state. Fast cached endpoint; returns JSON."""
+        """Get precomputed player rankings for a state. Applies filter_state=state and min_entrants>=32 by default; returns JSON."""
         try:
             data = client.get_precomputed(
                 state=state,
                 months_back=months_back,
                 videogame_id=videogame_id,
                 limit=limit,
+                filter_state=state,
+                min_entrants=min_entrants,
             )
             return _json(data)
         except SmashAPIError as err:

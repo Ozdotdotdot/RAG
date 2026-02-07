@@ -70,6 +70,8 @@ class SmashAPIClient:
         months_back: int = 3,
         videogame_id: int = 1386,
         limit: int = 25,
+        filter_state: str | None = None,
+        min_entrants: int | None = None,
     ) -> dict[str, Any]:
         params = {
             "state": state.upper(),
@@ -77,6 +79,10 @@ class SmashAPIClient:
             "videogame_id": videogame_id,
             "limit": limit,
         }
+        if filter_state:
+            params["filter_state"] = filter_state.upper()
+        if min_entrants is not None:
+            params["min_entrants"] = min_entrants
         return self._get("/precomputed", params=params)
 
     def get_precomputed_series(

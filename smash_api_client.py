@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
+import time
 from typing import Any
 
 import requests
@@ -17,6 +19,9 @@ class SmashAPIError(RuntimeError):
         self.status_code = status_code
 
 
+LOGGER = logging.getLogger("smash_api.client")
+
+
 @dataclass
 class SmashAPIClient:
     base_url: str = "https://server.cetacean-tuna.ts.net"
@@ -27,10 +32,17 @@ class SmashAPIClient:
 
     def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url.rstrip('/')}{path}"
+        started = time.perf_counter()
+        LOGGER.info("API request: GET %s params=%s", path, params or {})
         try:
             response = self._session.get(url, params=params, timeout=self.timeout_seconds)
         except RequestException as exc:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            LOGGER.error("API network error: GET %s in %d ms error=%s", path, elapsed_ms, exc)
             raise SmashAPIError(f"Network error for GET {path}: {exc}") from exc
+
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        LOGGER.info("API response: GET %s status=%d in %d ms", path, response.status_code, elapsed_ms)
 
         if not response.ok:
             message = f"HTTP {response.status_code} for GET {path}"

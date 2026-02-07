@@ -1,0 +1,127 @@
+"""Thin client for the Smash Data Analytics API."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import requests
+from requests import RequestException
+
+
+class SmashAPIError(RuntimeError):
+    """Raised when the Smash API returns an error response."""
+
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+@dataclass
+class SmashAPIClient:
+    base_url: str = "https://server.cetacean-tuna.ts.net"
+    timeout_seconds: int = 30
+
+    def __post_init__(self) -> None:
+        self._session = requests.Session()
+
+    def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        url = f"{self.base_url.rstrip('/')}{path}"
+        try:
+            response = self._session.get(url, params=params, timeout=self.timeout_seconds)
+        except RequestException as exc:
+            raise SmashAPIError(f"Network error for GET {path}: {exc}") from exc
+
+        if not response.ok:
+            message = f"HTTP {response.status_code} for GET {path}"
+            retry_after = response.headers.get("Retry-After")
+            if retry_after:
+                message = f"{message} (Retry-After: {retry_after}s)"
+            try:
+                body = response.json()
+            except ValueError:
+                body = response.text
+            raise SmashAPIError(f"{message}. Body: {body}", status_code=response.status_code)
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise SmashAPIError(f"Invalid JSON from GET {path}: {response.text}") from exc
+
+    def health(self) -> dict[str, Any]:
+        return self._get("/health")
+
+    def get_precomputed(
+        self,
+        *,
+        state: str,
+        months_back: int = 6,
+        videogame_id: int = 1386,
+        limit: int = 25,
+        character: str = "Marth",
+    ) -> dict[str, Any]:
+        params = {
+            "state": state.upper(),
+            "months_back": months_back,
+            "videogame_id": videogame_id,
+            "limit": limit,
+            "character": character,
+        }
+        return self._get("/precomputed", params=params)
+
+    def get_precomputed_series(
+        self,
+        *,
+        state: str,
+        tournament_contains: str,
+        months_back: int = 6,
+        videogame_id: int = 1386,
+        limit: int = 25,
+        allow_multi: bool = True,
+    ) -> dict[str, Any]:
+        params = {
+            "state": state.upper(),
+            "tournament_contains": tournament_contains,
+            "months_back": months_back,
+            "videogame_id": videogame_id,
+            "limit": limit,
+            "allow_multi": str(allow_multi).lower(),
+        }
+        return self._get("/precomputed_series", params=params)
+
+    def search_tournaments(
+        self,
+        *,
+        state: str,
+        tournament_contains: str,
+        months_back: int = 6,
+        videogame_id: int = 1386,
+        limit: int = 25,
+    ) -> dict[str, Any]:
+        params = {
+            "state": state.upper(),
+            "tournament_contains": tournament_contains,
+            "months_back": months_back,
+            "videogame_id": videogame_id,
+            "limit": limit,
+        }
+        return self._get("/tournaments", params=params)
+
+    def lookup_tournament_by_slug(self, *, tournament_slug: str) -> dict[str, Any]:
+        return self._get("/tournaments/by-slug", params={"tournament_slug": tournament_slug})
+
+    def search_by_slug(
+        self,
+        *,
+        tournament_slug: str,
+        character: str = "Marth",
+        videogame_id: int = 1386,
+        limit: int = 25,
+    ) -> dict[str, Any]:
+        params = {
+            "tournament_slug": tournament_slug,
+            "character": character,
+            "videogame_id": videogame_id,
+            "limit": limit,
+        }
+        return self._get("/search/by-slug", params=params)

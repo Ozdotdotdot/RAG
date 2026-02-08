@@ -73,7 +73,7 @@ def build_tools(
         state: str,
         tournament_contains: str,
         months_back: int = 3,
-        limit: int = 25,
+        limit: int = 0,
     ) -> str:
         """Get precomputed rankings for a tournament series name. Fast cached endpoint; returns JSON."""
         try:
@@ -93,7 +93,7 @@ def build_tools(
         state: str,
         tournament_contains: str,
         months_back: int = 3,
-        limit: int = 25,
+        limit: int = 0,
     ) -> str:
         """Find tournaments by name substring to discover exact slugs. Use this before slug lookups; returns JSON."""
         try:
@@ -129,7 +129,7 @@ def build_tools(
         def get_tournament_player_analytics(
             tournament_slug: str,
             user_request: str,
-            limit: int = 25,
+            limit: int = 0,
         ) -> str:
             """Compute player analytics for a specific tournament slug. High-intensity; only use when user explicitly asks for player stats."""
             if not policy.should_allow_high_intensity(user_request):

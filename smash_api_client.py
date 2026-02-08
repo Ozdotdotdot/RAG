@@ -69,7 +69,7 @@ class SmashAPIClient:
         state: str,
         months_back: int = 3,
         videogame_id: int = 1386,
-        limit: int = 25,
+        limit: int = 0,
         filter_state: str | None = None,
         min_entrants: int | None = None,
     ) -> dict[str, Any]:
@@ -92,7 +92,7 @@ class SmashAPIClient:
         tournament_contains: str,
         months_back: int = 3,
         videogame_id: int = 1386,
-        limit: int = 25,
+        limit: int = 0,
         allow_multi: bool = True,
     ) -> dict[str, Any]:
         params = {
@@ -112,7 +112,7 @@ class SmashAPIClient:
         tournament_contains: str,
         months_back: int = 3,
         videogame_id: int = 1386,
-        limit: int = 25,
+        limit: int = 0,
     ) -> dict[str, Any]:
         params = {
             "state": state.upper(),
@@ -131,7 +131,7 @@ class SmashAPIClient:
         *,
         tournament_slug: str,
         videogame_id: int = 1386,
-        limit: int = 25,
+        limit: int = 0,
     ) -> dict[str, Any]:
         params = {
             "tournament_slug": tournament_slug,

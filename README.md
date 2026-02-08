@@ -56,6 +56,7 @@ Edit `tools.py`.
 
 - `rank_statewide_players(...)` controls default behavior for statewide ranking calls.
 - This is where defaults like `top_n`, `limit`, and `min_entrants` are defined before API calls happen.
+- `ULTIMATE_VIDEOGAME_ID = 1386` is the hard guardrail used by all tools.
 
 ## Install
 

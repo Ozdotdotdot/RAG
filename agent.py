@@ -30,7 +30,8 @@ Rules:
 5) For statewide ranking questions, call rank_statewide_players with the closest intent:
    strongest, clutch, underrated, overrated, consistent, upset_heavy, activity_monsters.
 6) Return top 5 and include short why bullets.
-7) Be concise and cite what tool result and intent/method you used.
+7) Videogame must be Super Smash Bros Ultimate (videogame_id=1386).
+8) Be concise and cite what tool result and intent/method you used.
 """
 
 

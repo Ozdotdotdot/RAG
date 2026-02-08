@@ -12,6 +12,8 @@ from ranker import rank_players as run_ranking
 from ranking_profiles import RANKING_PROFILES, RankingIntent
 from smash_api_client import SmashAPIClient, SmashAPIError
 
+ULTIMATE_VIDEOGAME_ID = 1386
+
 
 def _json(data: dict[str, Any]) -> str:
     return json.dumps(data, ensure_ascii=True)
@@ -28,7 +30,6 @@ def build_tools(
         state: str,
         intent: RankingIntent = "strongest",
         months_back: int = 3,
-        videogame_id: int = 1386,
         top_n: int = 5,
         limit: int = 0,
         min_entrants: int = 32,
@@ -43,7 +44,7 @@ def build_tools(
             data = client.get_precomputed(
                 state=state,
                 months_back=months_back,
-                videogame_id=videogame_id,
+                videogame_id=ULTIMATE_VIDEOGAME_ID,
                 limit=limit,
                 filter_state=state,
                 min_entrants=min_entrants,
@@ -57,7 +58,7 @@ def build_tools(
                 "state": state.upper(),
                 "intent": intent,
                 "months_back": months_back,
-                "videogame_id": videogame_id,
+                "videogame_id": ULTIMATE_VIDEOGAME_ID,
                 "top_n": top_n,
                 "limit": limit,
                 "filter_state": state.upper(),
@@ -72,7 +73,6 @@ def build_tools(
         state: str,
         tournament_contains: str,
         months_back: int = 3,
-        videogame_id: int = 1386,
         limit: int = 25,
     ) -> str:
         """Get precomputed rankings for a tournament series name. Fast cached endpoint; returns JSON."""
@@ -81,7 +81,7 @@ def build_tools(
                 state=state,
                 tournament_contains=tournament_contains,
                 months_back=months_back,
-                videogame_id=videogame_id,
+                videogame_id=ULTIMATE_VIDEOGAME_ID,
                 limit=limit,
             )
             return _json(data)
@@ -93,7 +93,6 @@ def build_tools(
         state: str,
         tournament_contains: str,
         months_back: int = 3,
-        videogame_id: int = 1386,
         limit: int = 25,
     ) -> str:
         """Find tournaments by name substring to discover exact slugs. Use this before slug lookups; returns JSON."""
@@ -102,7 +101,7 @@ def build_tools(
                 state=state,
                 tournament_contains=tournament_contains,
                 months_back=months_back,
-                videogame_id=videogame_id,
+                videogame_id=ULTIMATE_VIDEOGAME_ID,
                 limit=limit,
             )
             count = int(data.get("count", 0))
@@ -130,7 +129,6 @@ def build_tools(
         def get_tournament_player_analytics(
             tournament_slug: str,
             user_request: str,
-            videogame_id: int = 1386,
             limit: int = 25,
         ) -> str:
             """Compute player analytics for a specific tournament slug. High-intensity; only use when user explicitly asks for player stats."""
@@ -142,7 +140,7 @@ def build_tools(
             try:
                 data = client.search_by_slug(
                     tournament_slug=tournament_slug,
-                    videogame_id=videogame_id,
+                    videogame_id=ULTIMATE_VIDEOGAME_ID,
                     limit=limit,
                 )
                 return _json(data)

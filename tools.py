@@ -13,6 +13,7 @@ from ranking_profiles import RANKING_PROFILES, RankingIntent
 from smash_api_client import SmashAPIClient, SmashAPIError
 
 ULTIMATE_VIDEOGAME_ID = 1386
+FULL_RESULT_LIMIT = 0
 
 
 def _json(data: dict[str, Any]) -> str:
@@ -31,7 +32,6 @@ def build_tools(
         intent: RankingIntent = "strongest",
         months_back: int = 3,
         top_n: int = 5,
-        limit: int = 0,
         min_entrants: int = 32,
     ) -> str:
         """Rank statewide players by intent using weighted scoring. Intents: strongest, clutch, underrated, overrated, consistent, upset_heavy, activity_monsters. Returns top players with method transparency in JSON."""
@@ -45,7 +45,7 @@ def build_tools(
                 state=state,
                 months_back=months_back,
                 videogame_id=ULTIMATE_VIDEOGAME_ID,
-                limit=limit,
+                limit=FULL_RESULT_LIMIT,
                 filter_state=state,
                 min_entrants=min_entrants,
             )
@@ -60,7 +60,7 @@ def build_tools(
                 "months_back": months_back,
                 "videogame_id": ULTIMATE_VIDEOGAME_ID,
                 "top_n": top_n,
-                "limit": limit,
+                "limit": FULL_RESULT_LIMIT,
                 "filter_state": state.upper(),
                 "min_entrants": min_entrants,
             }

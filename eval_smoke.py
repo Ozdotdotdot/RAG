@@ -42,7 +42,7 @@ def run_tool_check(client: SmashAPIClient, state: str) -> None:
     tool_map = {tool.name: tool for tool in tools}
     start = time.perf_counter()
     output = tool_map["rank_statewide_players"].invoke(
-        {"state": state, "intent": "clutch", "months_back": 3, "top_n": 5, "limit": 0}
+        {"state": state, "intent": "clutch", "months_back": 3, "top_n": 5}
     )
     elapsed_ms = int((time.perf_counter() - start) * 1000)
     print(f"[PASS] Tool call rank_statewide_players in {elapsed_ms} ms")

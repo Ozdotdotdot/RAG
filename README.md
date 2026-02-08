@@ -65,6 +65,12 @@ Edit `tools.py`.
 pip install requests langchain langchain-core langgraph langchain-ollama
 ```
 
+For web UI:
+
+```bash
+pip install chainlit
+```
+
 ## Run
 
 Smoke check (API + tools):
@@ -103,4 +109,44 @@ Another direct query:
 
 ```bash
 python agent.py --query "Top 5 most underrated players in GA for 3 months and explain the method used" --model qwen3:14b
+```
+
+## Chainlit Web UI
+
+Run a browser chat app that uses the same tool-calling agent:
+
+```bash
+chainlit run chainlit_app.py
+```
+
+Environment variables (optional):
+
+```bash
+export OLLAMA_MODEL=qwen3:14b
+export OLLAMA_BASE_URL=http://localhost:11434
+export SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net
+export DISABLE_HIGH_INTENSITY=false
+```
+
+Open the printed URL (usually `http://localhost:8000`).
+
+### Access from another device
+
+To listen on all interfaces:
+
+```bash
+chainlit run chainlit_app.py --host 0.0.0.0 --port 8000
+```
+
+Then access `http://<your-server-ip>:8000` from your remote device.
+
+If this is over the public internet, do not expose it directly without protection.
+Use one of:
+
+- Tailscale/WireGuard private network access.
+- Reverse proxy with auth + HTTPS (Nginx/Caddy/Traefik).
+- SSH tunnel:
+
+```bash
+ssh -L 8000:localhost:8000 your-user@your-server
 ```

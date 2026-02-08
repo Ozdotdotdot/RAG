@@ -77,3 +77,44 @@ If build/run says it cannot connect to `/var/run/docker.sock`, start Docker daem
 sudo systemctl start docker
 sudo systemctl enable docker
 ```
+
+## Troubleshooting `Connection refused`
+
+If Chainlit UI opens but replies with `Agent error: [Errno 111] Connection refused`,
+the container usually cannot reach Ollama.
+
+### 1) Verify Ollama on host
+
+```bash
+curl -sS http://localhost:11434/api/tags
+```
+
+If this fails, Ollama is not running on host.
+
+### 2) Verify container -> host Ollama path
+
+```bash
+docker run --rm --add-host=host.docker.internal:host-gateway \
+  python:3.12-slim python - <<'PY'
+import urllib.request
+print(urllib.request.urlopen("http://host.docker.internal:11434/api/tags", timeout=3).read()[:200])
+PY
+```
+
+If this fails, host Ollama is likely bound only to loopback and not reachable from Docker bridge.
+
+### 3) Linux fallback (recommended if step 2 fails)
+
+Run container with host networking and point Ollama to localhost:
+
+```bash
+docker run --rm -it \
+  --network host \
+  -e OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+  -e OLLAMA_MODEL=qwen3:14b \
+  -e SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net \
+  --name rag-chainlit \
+  rag-chainlit
+```
+
+Then open `http://localhost:8000`.

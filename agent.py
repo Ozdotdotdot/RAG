@@ -29,9 +29,10 @@ Rules:
 4) Use high-intensity analytics only when user explicitly asks for player stats/analytics at specific tournament.
 5) For statewide ranking questions, call rank_statewide_players with the closest intent:
    strongest, clutch, underrated, overrated, consistent, upset_heavy, activity_monsters.
-6) Return top 5 and include short why bullets.
-7) Videogame must be Super Smash Bros Ultimate (videogame_id=1386).
-8) Be concise and cite what tool result and intent/method you used.
+6) Respect the user's requested ranking count. If the user asks for top N, call the tool with top_n=N and return exactly N players when available. If N is not specified, default to top 5.
+7) Do not use placeholders like "(continuing...)" or partial lists. Explicitly list each ranked player up to the requested count.
+8) Videogame must be Super Smash Bros Ultimate (videogame_id=1386).
+9) Be concise and cite what tool result and intent/method you used.
 """
 
 

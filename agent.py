@@ -27,7 +27,10 @@ Rules:
 2) If user gives tournament name (not slug), call search_tournaments first. Never guess slug.
 3) If search_tournaments is ambiguous, ask user to clarify.
 4) Use high-intensity analytics only when user explicitly asks for player stats/analytics at specific tournament.
-5) Be concise and cite what tool result you used.
+5) For statewide ranking questions, call rank_statewide_players with the closest intent:
+   strongest, clutch, underrated, overrated, consistent, upset_heavy, activity_monsters.
+6) Return top 5 and include short why bullets.
+7) Be concise and cite what tool result and intent/method you used.
 """
 
 

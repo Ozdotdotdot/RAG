@@ -8,6 +8,8 @@ from typing import Any
 from langchain_core.tools import tool
 
 from policy import ToolPolicy
+from ranker import rank_players as run_ranking
+from ranking_profiles import RANKING_PROFILES, RankingIntent
 from smash_api_client import SmashAPIClient, SmashAPIError
 
 
@@ -22,14 +24,21 @@ def build_tools(
     include_high_intensity: bool = False,
 ) -> list[Any]:
     @tool
-    def get_player_rankings(
+    def rank_statewide_players(
         state: str,
+        intent: RankingIntent = "strongest",
         months_back: int = 3,
         videogame_id: int = 1386,
-        limit: int = 25,
+        top_n: int = 5,
+        limit: int = 0,
         min_entrants: int = 32,
     ) -> str:
-        """Get precomputed player rankings for a state. Applies filter_state=state and min_entrants>=32 by default; returns JSON."""
+        """Rank statewide players by intent using weighted scoring. Intents: strongest, clutch, underrated, overrated, consistent, upset_heavy, activity_monsters. Returns top players with method transparency in JSON."""
+        if intent not in RANKING_PROFILES:
+            return (
+                f"Unsupported intent '{intent}'. "
+                f"Supported intents: {', '.join(sorted(RANKING_PROFILES.keys()))}."
+            )
         try:
             data = client.get_precomputed(
                 state=state,
@@ -39,7 +48,22 @@ def build_tools(
                 filter_state=state,
                 min_entrants=min_entrants,
             )
-            return _json(data)
+            rows = data.get("results", [])
+            if not isinstance(rows, list):
+                return "Error: /precomputed response missing list field 'results'."
+
+            ranked = run_ranking(rows, profile=RANKING_PROFILES[intent], top_n=top_n)
+            ranked["query"] = {
+                "state": state.upper(),
+                "intent": intent,
+                "months_back": months_back,
+                "videogame_id": videogame_id,
+                "top_n": top_n,
+                "limit": limit,
+                "filter_state": state.upper(),
+                "min_entrants": min_entrants,
+            }
+            return _json(ranked)
         except SmashAPIError as err:
             return f"Error calling /precomputed: {err}"
 
@@ -98,7 +122,7 @@ def build_tools(
         except SmashAPIError as err:
             return f"Error calling /tournaments/by-slug: {err}"
 
-    tools = [get_player_rankings, get_series_rankings, search_tournaments, lookup_tournament]
+    tools = [rank_statewide_players, get_series_rankings, search_tournaments, lookup_tournament]
 
     if include_high_intensity:
 

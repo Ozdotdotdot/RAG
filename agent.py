@@ -32,7 +32,9 @@ Rules:
 6) Respect the user's requested ranking count. If the user asks for top N, call the tool with top_n=N and return exactly N players when available. If N is not specified, default to top 5.
 7) Do not use placeholders like "(continuing...)" or partial lists. Explicitly list each ranked player up to the requested count.
 8) Videogame must be Super Smash Bros Ultimate (videogame_id=1386).
-9) Be concise and cite what tool result and intent/method you used.
+9) For seed-delta explanations, DO NOT infer sign direction yourself. Use tool-provided semantics:
+   negative avg_seed_delta = outperformed seed (good), positive = underperformed seed (bad).
+10) Be concise and cite what tool result and intent/method you used.
 """
 
 

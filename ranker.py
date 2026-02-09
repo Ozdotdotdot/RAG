@@ -11,6 +11,23 @@ _MAX_CANDIDATES = 500
 _OVERSIZE_THRESHOLD = 5000
 
 
+def _format_num(value: Any, decimals: int = 3) -> str:
+    if value is None:
+        return "null"
+    return f"{float(value):.{decimals}f}"
+
+
+def _seed_delta_label(value: Any) -> str:
+    if value is None:
+        return "unknown"
+    numeric = float(value)
+    if numeric < 0:
+        return "outperformed_seed"
+    if numeric > 0:
+        return "underperformed_seed"
+    return "met_seed"
+
+
 def _normalize(
     value: float | int | None,
     *,
@@ -58,8 +75,18 @@ def _reason_lines(row: dict[str, Any], profile: RankingProfile) -> list[str]:
     for metric_weight in profile.weights[:3]:
         metric = metric_weight.metric
         value = row.get(metric)
+        if metric == "avg_seed_delta":
+            label = _seed_delta_label(value)
+            reasons.append(
+                "avg_seed_delta="
+                f"{_format_num(value)} ({label}; negative is good, positive is bad)"
+            )
+            continue
+        if metric == "upset_rate":
+            reasons.append(f"upset_rate={_format_num(value)}")
+            continue
         if value is not None:
-            reasons.append(f"{metric}={value}")
+            reasons.append(f"{metric}={_format_num(value)}")
     if not reasons:
         reasons.append("ranked with neutral handling for missing metrics")
     return reasons
@@ -103,6 +130,12 @@ def rank_players(
         "intent_label": profile.label,
         "method": {
             "description": profile.description,
+            "seed_delta_semantics": {
+                "metric": "avg_seed_delta",
+                "negative": "outperformed_seed (good)",
+                "positive": "underperformed_seed (bad)",
+                "zero": "met_seed",
+            },
             "weights": [
                 {
                     "metric": weight.metric,
@@ -128,6 +161,7 @@ def rank_players(
                     "weighted_win_rate": player.get("weighted_win_rate"),
                     "opponent_strength": player.get("opponent_strength"),
                     "avg_seed_delta": player.get("avg_seed_delta"),
+                    "seed_delta_label": _seed_delta_label(player.get("avg_seed_delta")),
                     "upset_rate": player.get("upset_rate"),
                     "activity_score": player.get("activity_score"),
                     "avg_event_entrants": player.get("avg_event_entrants"),

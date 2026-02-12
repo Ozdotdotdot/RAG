@@ -29,6 +29,11 @@ docker ps -a
 
 ## Run Chainlit
 
+On startup the UI shows two buttons — **API Agent** and **SQL Agent**.
+Pick which mode you want before chatting.
+
+### API Agent only (no database needed)
+
 ```bash
 docker run --rm -it \
   -p 8000:8000 \
@@ -40,8 +45,30 @@ docker run --rm -it \
   rag-chainlit
 ```
 
+### With SQL Agent (requires database mount)
+
+```bash
+docker run --rm -it \
+  -p 8000:8000 \
+  --add-host=host.docker.internal:host-gateway \
+  -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  -e OLLAMA_MODEL=qwen3:14b \
+  -e SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net \
+  -e SMASH_DB_PATH=/data/smash.db \
+  -v ~/code-repos/smashDA/.cache/startgg/smash.db:/data/smash.db:ro \
+  --name rag-chainlit \
+  rag-chainlit
+```
+
+- `-v ...smash.db:/data/smash.db:ro` mounts the SQLite database read-only into the container.
+- `-e SMASH_DB_PATH=/data/smash.db` tells the SQL agent where to find it inside the container.
+- Without the volume mount, choosing "SQL Agent" will fail.
+
+### Common options
+
 - Open `http://localhost:8000`.
 - `--rm` auto-deletes the container when it exits.
+- Change model with `-e OLLAMA_MODEL=qwen3:8b` (or any Ollama model tag).
 
 ## Useful container commands
 
@@ -113,6 +140,8 @@ docker run --rm -it \
   -e OLLAMA_BASE_URL=http://127.0.0.1:11434 \
   -e OLLAMA_MODEL=qwen3:14b \
   -e SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net \
+  -e SMASH_DB_PATH=/data/smash.db \
+  -v ~/code-repos/smashDA/.cache/startgg/smash.db:/data/smash.db:ro \
   --name rag-chainlit \
   rag-chainlit
 ```

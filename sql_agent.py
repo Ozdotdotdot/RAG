@@ -49,8 +49,11 @@ When querying player_metrics or player_series_metrics:
 - ALWAYS filter by home_state to match the requested state (e.g., WHERE home_state = 'GA').
   The 'state' column is the query region, NOT the player's home state. Players from other states
   compete in GA tournaments and appear in state='GA' rows. Use home_state to get actual residents.
-- ALWAYS filter by avg_event_entrants >= 32 unless the user explicitly says otherwise.
-  This excludes players from tiny locals whose stats are unreliable.
+- For RANKING queries (top players, best, etc.), filter by avg_event_entrants >= 32 to exclude
+  players from tiny locals whose stats are unreliable.
+- For SPECIFIC PLAYER lookups (e.g., "tell me about player X"), do NOT apply the min_entrants
+  filter — the user wants info on that specific player regardless of event size.
+  Use gamer_tag LIKE '%name%' COLLATE NOCASE for flexible name matching.
 - Default to months_back = 3 for recent data unless the user specifies otherwise.
 
 For ranking-style questions (best, strongest, underrated, clutch, overrated, consistent,

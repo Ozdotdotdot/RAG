@@ -37,8 +37,8 @@ RANKING_PROFILES: dict[RankingIntent, RankingProfile] = {
         label="Strongest Players",
         description="Overall strongest by weighted win rate and opponent strength.",
         weights=(
-            MetricWeight("weighted_win_rate", 0.60, "desc"),
-            MetricWeight("opponent_strength", 0.35, "desc"),
+            MetricWeight("weighted_win_rate", 0.55, "desc"),
+            MetricWeight("opponent_strength", 0.40, "desc"),
             MetricWeight("activity_score", 0.05, "desc"),
         ),
     ),

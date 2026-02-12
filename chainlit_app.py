@@ -95,7 +95,10 @@ async def on_message(message: cl.Message) -> None:
 
     history.append(HumanMessage(content=message.content))
     try:
-        result = await cl.make_async(agent.invoke)({"messages": history})
+        result = await cl.make_async(agent.invoke)(
+            {"messages": history},
+            config={"recursion_limit": 50},
+        )
         messages = result.get("messages", [])
         cl.user_session.set("history", messages[-40:])
         content = messages[-1].content if messages else "No response from agent."

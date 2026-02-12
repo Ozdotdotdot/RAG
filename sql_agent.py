@@ -186,7 +186,10 @@ def build_sql_agent(
 
 def run_query(agent: Any, query: str) -> dict[str, Any]:
     started = time.perf_counter()
-    result = agent.invoke({"messages": [HumanMessage(content=query)]})
+    result = agent.invoke(
+        {"messages": [HumanMessage(content=query)]},
+        config={"recursion_limit": 50},
+    )
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     LOGGER.info("SQL agent completed in %d ms", elapsed_ms)
     return result

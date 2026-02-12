@@ -53,7 +53,12 @@ When querying player_metrics or player_series_metrics:
   players from tiny locals whose stats are unreliable.
 - For SPECIFIC PLAYER lookups (e.g., "tell me about player X"), do NOT apply the min_entrants
   filter — the user wants info on that specific player regardless of event size.
-  Use gamer_tag LIKE '%name%' COLLATE NOCASE for flexible name matching.
+  You MUST run an actual query with a WHERE clause, e.g.:
+  SELECT gamer_tag, player_id, weighted_win_rate, opponent_strength, avg_seed_delta,
+         upset_rate, activity_score, home_state, avg_event_entrants, months_back
+  FROM player_metrics WHERE gamer_tag LIKE '%name%' COLLATE NOCASE
+  Do NOT just look at the schema sample rows — those are only 3 random rows and will almost
+  never contain the player you are looking for.
 - Default to months_back = 3 for recent data unless the user specifies otherwise.
 
 For ranking-style questions (best, strongest, underrated, clutch, overrated, consistent,
@@ -161,9 +166,9 @@ def build_sql_agent(
     db_path: str = DEFAULT_DB_PATH,
     top_k: int = DEFAULT_TOP_K,
 ) -> Any:
-    # Read-only connection via SQLite URI
+    # Read-only connection via SQLite URI; echo=True logs all SQL via sqlalchemy.engine
     db_uri = f"sqlite:///file:{db_path}?mode=ro&uri=true"
-    db = SQLDatabase.from_uri(db_uri)
+    db = SQLDatabase.from_uri(db_uri, engine_args={"echo": True})
 
     llm = ChatOllama(model=model, base_url=base_url, temperature=0.1)
 
@@ -201,8 +206,7 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    # Enable verbose SQL logging from LangChain
-    logging.getLogger("langchain_community.utilities.sql_database").setLevel(logging.DEBUG)
+    # SQLAlchemy echo=True logs queries through sqlalchemy.engine at INFO level
 
     agent = build_sql_agent(
         model=args.model,

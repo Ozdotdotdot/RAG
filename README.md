@@ -121,7 +121,7 @@ chainlit run chainlit_app.py
 
 Environment variables (optional):
 
-```bash
+```bash 
 export OLLAMA_MODEL=qwen3:14b
 export OLLAMA_BASE_URL=http://localhost:11434
 export SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net

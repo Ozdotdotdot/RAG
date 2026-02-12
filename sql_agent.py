@@ -3,19 +3,25 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import sqlite3
 import time
 from typing import Any
 
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import HumanMessage
+from langchain_core.tools import tool
 from langchain.agents import create_agent as create_react_agent
 
 try:
     from langchain_ollama import ChatOllama
 except ImportError:
     from langchain_community.chat_models import ChatOllama
+
+from ranker import rank_players as run_ranking
+from ranking_profiles import RANKING_PROFILES
 
 LOGGER = logging.getLogger("smash_sql_agent")
 
@@ -38,6 +44,19 @@ DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the databa
 To start you should ALWAYS look at the tables in the database to see what you can query. \
 Do NOT skip this step. Then you should query the schema of the most relevant tables.
 
+=== CRITICAL FILTERING RULES ===
+When querying player_metrics or player_series_metrics:
+- ALWAYS filter by home_state to match the requested state (e.g., WHERE home_state = 'GA').
+  The 'state' column is the query region, NOT the player's home state. Players from other states
+  compete in GA tournaments and appear in state='GA' rows. Use home_state to get actual residents.
+- ALWAYS filter by avg_event_entrants >= 32 unless the user explicitly says otherwise.
+  This excludes players from tiny locals whose stats are unreliable.
+- Default to months_back = 3 for recent data unless the user specifies otherwise.
+
+For ranking-style questions (best, strongest, underrated, clutch, overrated, consistent,
+upset_heavy, most active, etc.), use the rank_players_by_intent tool instead of raw SQL.
+It applies proper population-normalized weighted scoring that SQL cannot replicate.
+
 === DATABASE GUIDE ===
 
 Lightweight tables (prefer these):
@@ -47,7 +66,8 @@ Lightweight tables (prefer these):
 - player_metrics: precomputed stats per player/state/month window.
   Columns: state, videogame_id, months_back, target_character, player_id, gamer_tag,
   weighted_win_rate, opponent_strength, avg_seed_delta, upset_rate, activity_score,
-  home_state, avg_event_entrants, max_event_entrants, large_event_share, latest_event_start
+  home_state, home_state_inferred, avg_event_entrants, max_event_entrants,
+  large_event_share, latest_event_start
 - player_series_metrics: same as player_metrics but per tournament series.
   Extra columns: series_key, series_name_term, series_slug_term, window_offset, window_size
 
@@ -62,13 +82,73 @@ Heavy tables (use only when needed):
 Tips:
 - Dates are Unix timestamps. Use datetime(start_at, 'unixepoch') for human-readable dates.
 - All data is videogame_id = 1386 (Super Smash Bros. Ultimate).
-- player_metrics.state is the query region; home_state is the player's actual home state.
 - Negative avg_seed_delta = outperformed seed (good). Positive = underperformed seed (bad).
 - For JSON array queries: SELECT value FROM event_payloads, json_each(event_payloads.standings_json) ...
 """
 
 DEFAULT_TOP_K = 10
 DEFAULT_DB_PATH = "/home/ozdotdotdot/code-repos/smashDA/.cache/startgg/smash.db"
+
+
+def _build_rank_tool(db_path: str):
+    """Create the rank_players_by_intent tool with a closure over db_path."""
+
+    @tool
+    def rank_players_by_intent(
+        state: str,
+        intent: str = "strongest",
+        months_back: int = 3,
+        top_n: int = 5,
+        min_entrants: int = 32,
+    ) -> str:
+        """Rank players by intent using weighted scoring. Use this for questions like
+        'best players', 'most underrated', 'most clutch', etc. Intents: strongest,
+        clutch, underrated, overrated, consistent, upset_heavy, activity_monsters.
+        Returns ranked players with method transparency in JSON."""
+        if intent not in RANKING_PROFILES:
+            return (
+                f"Unsupported intent '{intent}'. "
+                f"Supported intents: {', '.join(sorted(RANKING_PROFILES.keys()))}."
+            )
+
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        try:
+            query = """
+                SELECT player_id, gamer_tag, weighted_win_rate, opponent_strength,
+                       avg_seed_delta, upset_rate, activity_score, home_state,
+                       avg_event_entrants, max_event_entrants, large_event_share,
+                       latest_event_start
+                FROM player_metrics
+                WHERE state = ?
+                  AND videogame_id = 1386
+                  AND months_back = ?
+                  AND home_state = ?
+                  AND avg_event_entrants >= ?
+            """
+            LOGGER.info("rank_players_by_intent SQL:\n%s", query)
+            LOGGER.info("  params: state=%s, months_back=%d, home_state=%s, min_entrants=%d",
+                        state.upper(), months_back, state.upper(), min_entrants)
+            rows = conn.execute(query, (state.upper(), months_back, state.upper(), min_entrants)).fetchall()
+        finally:
+            conn.close()
+
+        if not rows:
+            return json.dumps({"error": f"No players found for state={state.upper()} with min_entrants>={min_entrants}."})
+
+        row_dicts = [dict(row) for row in rows]
+        ranked = run_ranking(row_dicts, profile=RANKING_PROFILES[intent], top_n=top_n)
+        ranked["query"] = {
+            "state": state.upper(),
+            "intent": intent,
+            "months_back": months_back,
+            "videogame_id": 1386,
+            "top_n": top_n,
+            "min_entrants": min_entrants,
+        }
+        return json.dumps(ranked, ensure_ascii=True)
+
+    return rank_players_by_intent
 
 
 def build_sql_agent(
@@ -85,12 +165,15 @@ def build_sql_agent(
     llm = ChatOllama(model=model, base_url=base_url, temperature=0.1)
 
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
-    tools = toolkit.get_tools()
+    toolkit_tools = toolkit.get_tools()
 
-    llm_with_tools = llm.bind_tools(tools)
+    rank_tool = _build_rank_tool(db_path)
+    all_tools = toolkit_tools + [rank_tool]
+
+    llm_with_tools = llm.bind_tools(all_tools)
     prompt = SQL_SYSTEM_PROMPT.format(top_k=top_k)
 
-    return create_react_agent(llm_with_tools, tools, system_prompt=prompt)
+    return create_react_agent(llm_with_tools, all_tools, system_prompt=prompt)
 
 
 def run_query(agent: Any, query: str) -> dict[str, Any]:
@@ -115,6 +198,9 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    # Enable verbose SQL logging from LangChain
+    logging.getLogger("langchain_community.utilities.sql_database").setLevel(logging.DEBUG)
+
     agent = build_sql_agent(
         model=args.model,
         base_url=args.base_url,

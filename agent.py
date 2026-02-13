@@ -10,11 +10,7 @@ from typing import Any
 from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 
-try:
-    from langchain_ollama import ChatOllama
-except ImportError:  # Fallback for older setups.
-    from langchain_community.chat_models import ChatOllama
-
+from llm_provider import build_llm
 from policy import ToolPolicy
 from smash_api_client import SmashAPIClient
 from tools import build_tools
@@ -40,7 +36,8 @@ Rules:
 
 def build_agent(
     *,
-    model: str = "qwen3:14b",
+    provider: str = "ollama",
+    model: str | None = None,
     base_url: str = "http://localhost:11434",
     api_base_url: str = "https://server.cetacean-tuna.ts.net",
     include_high_intensity: bool = True,
@@ -49,7 +46,7 @@ def build_agent(
     policy = ToolPolicy()
     tools = build_tools(client, policy, include_high_intensity=include_high_intensity)
 
-    llm = ChatOllama(model=model, base_url=base_url, temperature=0.1)
+    llm = build_llm(provider, model, base_url=base_url)
     llm_with_tools = llm.bind_tools(tools)
     return create_react_agent(llm_with_tools, tools, prompt=SYSTEM_PROMPT)
 
@@ -63,9 +60,10 @@ def run_query(agent: Any, query: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run local Smash agent with Ollama.")
+    parser = argparse.ArgumentParser(description="Run Smash agent.")
     parser.add_argument("--query", required=True, help="User question to ask the agent.")
-    parser.add_argument("--model", default="qwen3:14b", help="Ollama model tag.")
+    parser.add_argument("--provider", default="ollama", choices=["ollama", "openai"], help="LLM provider.")
+    parser.add_argument("--model", default=None, help="Model name (default: provider-specific).")
     parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL.")
     parser.add_argument(
         "--api-base-url",
@@ -81,6 +79,7 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     agent = build_agent(
+        provider=args.provider,
         model=args.model,
         base_url=args.base_url,
         api_base_url=args.api_base_url,

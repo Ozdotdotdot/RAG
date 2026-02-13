@@ -12,9 +12,19 @@ from agent import build_agent
 from sql_agent import build_sql_agent
 
 
+def _get_llm_config() -> dict:
+    """Return provider, model, and base_url from environment."""
+    provider = os.getenv("LLM_PROVIDER", "ollama")
+    if provider == "openai":
+        model = os.getenv("OPENAI_MODEL", "gpt-5.2")
+    else:
+        model = os.getenv("OLLAMA_MODEL", "qwen3:14b")
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    return {"provider": provider, "model": model, "base_url": base_url}
+
+
 def _build_api_agent() -> Any:
-    model = os.getenv("OLLAMA_MODEL", "qwen3:14b")
-    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    cfg = _get_llm_config()
     api_base_url = os.getenv("SMASH_API_BASE_URL", "https://server.cetacean-tuna.ts.net")
     include_high_intensity = os.getenv("DISABLE_HIGH_INTENSITY", "false").lower() not in {
         "1",
@@ -22,23 +32,24 @@ def _build_api_agent() -> Any:
         "yes",
     }
     return build_agent(
-        model=model,
-        base_url=ollama_base_url,
+        provider=cfg["provider"],
+        model=cfg["model"],
+        base_url=cfg["base_url"],
         api_base_url=api_base_url,
         include_high_intensity=include_high_intensity,
     )
 
 
 def _build_sql_agent() -> Any:
-    model = os.getenv("OLLAMA_MODEL", "qwen3:14b")
-    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    cfg = _get_llm_config()
     db_path = os.getenv(
         "SMASH_DB_PATH",
         "/home/ozdotdotdot/code-repos/smashDA/.cache/startgg/smash.db",
     )
     return build_sql_agent(
-        model=model,
-        base_url=ollama_base_url,
+        provider=cfg["provider"],
+        model=cfg["model"],
+        base_url=cfg["base_url"],
         db_path=db_path,
     )
 

@@ -14,6 +14,8 @@ This project uses a custom image named `rag-chainlit` built from `python:3.12-sl
 docker build -f Dockerfile.chainlit -t rag-chainlit .
 ```
 
+Rebuild after any code or dependency changes.
+
 ## Inspect what you have
 
 ```bash
@@ -27,12 +29,44 @@ docker ps
 docker ps -a
 ```
 
+---
+
+## LLM Providers
+
+The agent supports two LLM providers, controlled by the `LLM_PROVIDER` environment variable:
+
+| Provider | `LLM_PROVIDER` | Model env var | Default model | Requires |
+|----------|----------------|---------------|---------------|----------|
+| Ollama (local) | `ollama` (default) | `OLLAMA_MODEL` | `qwen3:14b` | Ollama running on host |
+| OpenAI (cloud) | `openai` | `OPENAI_MODEL` | `gpt-5.2` | `OPENAI_API_KEY` |
+
+When `LLM_PROVIDER` is omitted or set to `ollama`, behavior is identical to before — it
+connects to your local Ollama instance. Set it to `openai` to use OpenAI's API instead
+(no Ollama needed).
+
+---
+
+## Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LLM_PROVIDER` | `ollama` | Which LLM backend: `ollama` or `openai` |
+| `OLLAMA_MODEL` | `qwen3:14b` | Model tag when using Ollama |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OPENAI_API_KEY` | *(none)* | **Required** when `LLM_PROVIDER=openai` |
+| `OPENAI_MODEL` | `gpt-5.2` | Model name when using OpenAI |
+| `SMASH_API_BASE_URL` | `https://server.cetacean-tuna.ts.net` | Remote Smash data API |
+| `SMASH_DB_PATH` | *(host default)* | Path to `smash.db` inside container (set to `/data/smash.db` with volume mount) |
+| `DISABLE_HIGH_INTENSITY` | `false` | Set to `true` to hide the expensive analytics tool |
+
+---
+
 ## Run Chainlit
 
 On startup the UI shows two buttons — **API Agent** and **SQL Agent**.
 Pick which mode you want before chatting.
 
-### API Agent only (no database needed)
+### Ollama — API Agent only (no database needed)
 
 ```bash
 docker run --rm -it \
@@ -45,7 +79,7 @@ docker run --rm -it \
   rag-chainlit
 ```
 
-### With SQL Agent (requires database mount)
+### Ollama — With SQL Agent (requires database mount)
 
 ```bash
 docker run --rm -it \
@@ -64,11 +98,66 @@ docker run --rm -it \
 - `-e SMASH_DB_PATH=/data/smash.db` tells the SQL agent where to find it inside the container.
 - Without the volume mount, choosing "SQL Agent" will fail.
 
+### OpenAI — API Agent only (no Ollama needed)
+
+No Ollama required. The container calls the OpenAI API directly.
+
+```bash
+docker run --rm -it \
+  -p 8000:8000 \
+  -e LLM_PROVIDER=openai \
+  -e OPENAI_API_KEY=sk-... \
+  -e OPENAI_MODEL=gpt-5.2 \
+  -e SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net \
+  --name rag-chainlit \
+  rag-chainlit
+```
+
+### OpenAI — With SQL Agent (no Ollama needed)
+
+```bash
+docker run --rm -it \
+  -p 8000:8000 \
+  -e LLM_PROVIDER=openai \
+  -e OPENAI_API_KEY=sk-... \
+  -e OPENAI_MODEL=gpt-5.2 \
+  -e SMASH_API_BASE_URL=https://server.cetacean-tuna.ts.net \
+  -e SMASH_DB_PATH=/data/smash.db \
+  -v ~/code-repos/smashDA/.cache/startgg/smash.db:/data/smash.db:ro \
+  --name rag-chainlit \
+  rag-chainlit
+```
+
 ### Common options
 
 - Open `http://localhost:8000`.
 - `--rm` auto-deletes the container when it exits.
-- Change model with `-e OLLAMA_MODEL=qwen3:8b` (or any Ollama model tag).
+- Change Ollama model with `-e OLLAMA_MODEL=qwen3:8b`.
+- Change OpenAI model with `-e OPENAI_MODEL=gpt-5.2`.
+- Switch provider with `-e LLM_PROVIDER=openai` (or `ollama`).
+
+---
+
+## CLI Usage (inside container or locally)
+
+You can also run agents directly from the command line with the `--provider` flag:
+
+```bash
+# Ollama (default)
+python agent.py --query "Who are the top players in GA?"
+
+# OpenAI
+python agent.py --query "Who are the top players in GA?" --provider openai --model gpt-5.2
+
+# SQL agent with OpenAI
+python sql_agent.py --query "Show me GA players with high win rates" --provider openai
+```
+
+The `--provider` flag accepts `ollama` (default) or `openai`. When using `openai`, the
+`OPENAI_API_KEY` environment variable must be set. The `--model` flag overrides the
+default for that provider.
+
+---
 
 ## Useful container commands
 
@@ -108,7 +197,8 @@ sudo systemctl enable docker
 ## Troubleshooting `Connection refused`
 
 If Chainlit UI opens but replies with `Agent error: [Errno 111] Connection refused`,
-the container usually cannot reach Ollama.
+the container usually cannot reach Ollama. (This does not apply when using the OpenAI
+provider since it talks to OpenAI's servers directly.)
 
 ### 1) Verify Ollama on host
 

@@ -1,4 +1,4 @@
-"""Build and run a local Ollama text-to-SQL agent for the Smash database."""
+"""Build and run a text-to-SQL agent for the Smash database."""
 
 from __future__ import annotations
 
@@ -15,11 +15,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain.agents import create_agent as create_react_agent
 
-try:
-    from langchain_ollama import ChatOllama
-except ImportError:
-    from langchain_community.chat_models import ChatOllama
-
+from llm_provider import build_llm
 from ranker import rank_players as run_ranking
 from ranking_profiles import RANKING_PROFILES
 
@@ -161,7 +157,8 @@ def _build_rank_tool(db_path: str):
 
 def build_sql_agent(
     *,
-    model: str = "qwen3:14b",
+    provider: str = "ollama",
+    model: str | None = None,
     base_url: str = "http://localhost:11434",
     db_path: str = DEFAULT_DB_PATH,
     top_k: int = DEFAULT_TOP_K,
@@ -170,7 +167,7 @@ def build_sql_agent(
     db_uri = f"sqlite:///file:{db_path}?mode=ro&uri=true"
     db = SQLDatabase.from_uri(db_uri, engine_args={"echo": True})
 
-    llm = ChatOllama(model=model, base_url=base_url, temperature=0.1)
+    llm = build_llm(provider, model, base_url=base_url)
 
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     toolkit_tools = toolkit.get_tools()
@@ -196,9 +193,10 @@ def run_query(agent: Any, query: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run local Smash SQL agent with Ollama.")
+    parser = argparse.ArgumentParser(description="Run Smash SQL agent.")
     parser.add_argument("--query", required=True, help="Natural language question to ask.")
-    parser.add_argument("--model", default="qwen3:14b", help="Ollama model tag.")
+    parser.add_argument("--provider", default="ollama", choices=["ollama", "openai"], help="LLM provider.")
+    parser.add_argument("--model", default=None, help="Model name (default: provider-specific).")
     parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL.")
     parser.add_argument(
         "--db-path",
@@ -209,9 +207,9 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    # SQLAlchemy echo=True logs queries through sqlalchemy.engine at INFO level
 
     agent = build_sql_agent(
+        provider=args.provider,
         model=args.model,
         base_url=args.base_url,
         db_path=args.db_path,

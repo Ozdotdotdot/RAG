@@ -150,3 +150,4 @@ Use one of:
 ```bash
 ssh -L 8000:localhost:8000 your-user@your-server
 ```
+If you have issues running Chainlit because your version of python is too new, read the docker.md
